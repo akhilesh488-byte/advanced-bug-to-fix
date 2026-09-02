@@ -1,0 +1,27 @@
+Basic project outline:
+
+1. User submits: prompt + GitHub repo URL
+2. clone_repo(url) → if fails, report error to user and stop; else continue
+3. run_shell → execute the code once, capture output
+4. Classify: does output contain a traceback, or is it a clean run with a value?
+        │
+        ├── Traceback → skip most of localization, LLM1 mainly parses the trace (still goes through the loop below, but usually converges in 1 turn since the trace hands it the file+line)
+        │
+        └── Clean run, wrong value → full localization loop needed (see below)
+5. Prompt-type routing:
+        ├── Function named explicitly → search_code(function_name) extracts it directly, skip most of LLM1's exploration
+        └── Vague / a bit specific → LLM1 reads and explores freely (see below)
+6. LLM1 loop → produces context packet (JSON)
+7. sandbox_manager.create_attempt() → LLM2 works in an isolated worktree, using LLM1's packet
+8. LLM2 tries a fix, tests it, reports result
+        ├── Pass → hand to LLM3
+        └── Fail → sandbox_manager.discard_attempt(), create a new one, LLM2 retries with the failure report from the last attempt included, so it doesn't repeat itself
+9. LLM3 verifies independently against the baseline from step 3
+        ├── Pass → sandbox_manager.finalize_attempt() → git_push → report_write (success report, markdown)
+        └── Fail → report_write (failure report) → ask user: retry? → if yes, loop back to LLM1 with the failure report attached
+
+
+We will first start with tool creation.
+tools:
+1. clone_repo: clone the repo inside target_repo folder, if already exist give out a message “repository already exist”, if it doesn’t exist then create a new one, if tool fails return a fail message.
+2. 
