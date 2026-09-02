@@ -25,4 +25,6 @@ We will first start with tool creation.
 tools:
 1. clone_repo: clone the repo inside target_repo folder, if already exist give out a message “repository already exist”, if it doesn’t exist then create a new one, if tool fails return a fail message.
 2. run_shell: this is to run the program and check for the output, → problems: terminal may ask for input, the file maybe a jupyter notebook, for v1 version we will skip these two cases and focus only on programs that return a value, and instead of using ‘python’ command to execute the program, which may run it in global python env, so we will use ‘sys.executable’ to run the program in current venv.
-3. 
+3. read_file: this tool will provide llm the entire content of a particular file.
+4. search_code: if user provides name of the function or a particular syntax then its best for the llm to have access to a search tool which will return the name of the file that has the particular syntax or the function.
+        limitation: There is a problem, if user doesn't provide the accurate syntax as is in the file then this tool is of no use, even a space matters here.
