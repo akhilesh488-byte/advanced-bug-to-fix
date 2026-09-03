@@ -28,3 +28,4 @@ tools:
 3. read_file: this tool will provide llm the entire content of a particular file.
 4. search_code: if user provides name of the function or a particular syntax then its best for the llm to have access to a search tool which will return the name of the file that has the particular syntax or the function.
         limitation: There is a problem, if user doesn't provide the accurate syntax as is in the file then this tool is of no use, even a space matters here.
+5. edit_file → this will replace a part of the file with the new content, method: take the file path, old content, look for that old content in the file and replace it completely with the new content, the problem: old content may occur more than once, so we have to force llm to provide surrounding context to make the part look unique. 
