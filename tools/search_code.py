@@ -1,6 +1,9 @@
 from pathlib import Path
 
-def search_code(query: str, repo_path: str = "./target_repo", ext: str = ".py") -> dict:
+root = Path(__file__).resolve().parent.parent
+target_repo_default = str(root/"target_repo")
+
+def search_code(query: str, repo_path: str = target_repo_default, ext: str = ".py") -> dict:
 
     try:
         root_path = Path(repo_path)
