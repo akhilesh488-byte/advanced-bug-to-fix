@@ -30,3 +30,6 @@ tools:
         limitation: There is a problem, if user doesn't provide the accurate syntax as is in the file then this tool is of no use, even a space matters here.
 5. edit_file: this will replace a part of the file with the new content, method: take the file path, old content, look for that old content in the file and replace it completely with the new content, the problem: old content may occur more than once, so we have to force llm to provide surrounding context to make the part look unique. 
 6. write_file: this is simple, if file does not exist create a new and write the contents, if already exist then replace the content but make sure that llm is aware of this.
+7. report_write: llm will pass the reports to each other as context, for visibility its best to write it down in the disk and use it.
+        At the end we want to generate a final report for Human review.
+
