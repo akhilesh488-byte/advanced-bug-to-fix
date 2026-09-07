@@ -2,7 +2,6 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from typing import TypedDict, Annotated
 from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
-from langchain_openai import ChatOpenAI
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
