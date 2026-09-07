@@ -1,1 +1,4 @@
 GitPython
+langgraph 
+langchain
+langchain-openai
