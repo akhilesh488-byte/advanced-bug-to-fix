@@ -18,4 +18,3 @@ def clone_repo(repo_url: str, clone_dir: str = target_repo_default) -> dict:
     except GitCommandError as e:
         return {"success": False, "path": None, "error": str(e)}
 
-print(clone_repo("git@github.com:akhilesh488-byte/LangChain_basics.git"))
