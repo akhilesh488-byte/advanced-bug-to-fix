@@ -34,3 +34,5 @@ def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
             "stderr": str(e),
             "exit_code": None
         }
+
+print(run_shell(["python3 graph/agent.py"], "."))

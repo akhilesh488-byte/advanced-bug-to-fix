@@ -1,13 +1,19 @@
 from pathlib import Path
 
-def edit_file(path: str, old_content: str, new_content: str) -> dict:
+root = Path(__file__).resolve().parent.parent
+
+def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
 
     try:
 
-        file_path = Path(path)
+        clean_path = relative_path.lstrip("/\\")
+        file_path = (clean_path/relative_path).resolve()
+
+        if not file_path.is_relative_to(root.resolve):
+            return {"success": False, "error": f"access denied {relative_path} is outside the working directory"}
 
         if not file_path.exists():
-            return {"success": False, "error": f"the path {path} does not exist."}
+            return {"success": False, "error": f"the path {relative_path} does not exist."}
 
         content = file_path.read_text("utf-8")
         count = content.count(old_content)

@@ -1,0 +1,1 @@
+print("/documentation.txt".lstrip("/\\"))

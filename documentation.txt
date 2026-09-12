@@ -33,3 +33,26 @@ tools:
 7. report_write: llm will pass the reports to each other as context, for visibility its best to write it down in the disk and use it.
         At the end we want to generate a final report for Human review.
 
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## The Mental Model for Agentic Architecture
+When deciding where to handle an edge case in your projects, ask yourself one question: Can the LLM reasonably recover from this?
+
+### Put the error handling in the TOOL if:
+
+The AI guessed a bad parameter (e.g., misspelled a file name, bad regex).
+
+The AI needs to try an alternative approach (e.g., tests failed, so it needs to rewrite the code).
+
+Action: Return the error as a string to the LLM so it can try again.
+
+Put the error handling in the GRAPH if:
+
+A prerequisite step entirely failed (e.g., repository didn't clone, database is down).
+
+An LLM agent exceeded its iteration limit or hit a safety filter without producing its required artifact (like a report).
+
+Starting the next node would just be throwing money/compute into a black hole.
+
+Action: Route the graph to an END state or a specific human_intervention node.
