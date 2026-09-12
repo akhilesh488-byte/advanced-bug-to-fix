@@ -1,12 +1,11 @@
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
-target_repo_default = str(root/"target_repo")
 
-def search_code(query: str, repo_path: str = target_repo_default, ext: str = ".py") -> dict:
+def search_code(query: str, ext: str = ".py") -> dict:
 
     try:
-        root_path = Path(repo_path)
+        root = Path(__file__).resolve().parent.parent
+        root_path = root/"target_repo"
 
         if not root_path.exists():
             return {"success": False, "matches": [], "error": f"path {root_path} doesnot exist"}

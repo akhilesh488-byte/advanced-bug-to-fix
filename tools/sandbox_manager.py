@@ -1,16 +1,16 @@
 from pathlib import Path
 from git import Repo, GitCommandError
 
-root = Path(__file__).resolve().parent.parent
-target_repo_default = str(root/"target_repo")
-branch_repo_default = str(root/"sandbox")
 
-def create_branch(job_id: str, attempt_no: int, target_repo_path: str = target_repo_default, branch_repo_path: str = branch_repo_default) -> dict:
+def create_branch(job_id: str, attempt_no: int) -> dict:
     try:
-        repo = Repo(target_repo_path)
+        root = Path(__file__).resolve().parent.parent
+        target_repo = str(root/"target_repo")
+        branch_repo = str(root/"sandbox")
+        repo = Repo(target_repo)
 
         branch_name = f"bugfix/{job_id}-attempt-{attempt_no}"
-        worktree_path = str(Path(branch_repo_path)/f"{job_id}-attempt-{attempt_no}")
+        worktree_path = str(Path(branch_repo)/f"{job_id}-attempt-{attempt_no}")
 
         repo.git.worktree("add", "-b", branch_name, worktree_path)
 
