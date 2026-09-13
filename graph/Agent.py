@@ -11,17 +11,18 @@ class Agent:
     def __init__(self, model, tools, system_message = "", max_iterations = 30):
         self.system_message = system_message
         graph = StateGraph(AgentState)
-        self.model = model.bind_tools(list(tools.value()))
+        self.model = model.bind_tools(list(tools.values()))
         self.max_iterations = max_iterations
         self.tools = tools
         graph.add_node("llm", self.call_llm)
-        graph.add_node("action", self.call_tool)
+        graph.add_node("report_write_node", self.report_write_node)
+        graph.add_node("other_actions", self.call_tool)
         graph.add_conditional_edges(
             "llm",
-            self.action_exists,
-            {True: "action", False: END}
+            self.action_exists
         )
-        graph.add_edge("action", "llm")
+        graph.add_edge("other_actions", "llm")
+        graph.add_edge("report_write_node", END)
         graph.set_entry_point("llm")
         self.graph = graph.compile()
 
@@ -50,9 +51,28 @@ class Agent:
         return {"messages": results}
 
     def action_exists(self, state: AgentState):
-        if state.get("iterations", 0) >= self.max_iterations:
-            return False
         tool_calls = state["messages"][-1].tool_calls
-        return len(tool_calls) > 0
 
-print("success")
+        if len(tool_calls) > 0: 
+            if state.get("iterations", 0) >= self.max_iterations:
+                return END
+
+            elif tool_calls[0]["name"] == "report_write":
+                return "report_write_node"
+            
+            else:
+                return "other_actions"
+
+        else:
+            return END
+
+    def report_write_node(self, state:AgentState):
+        tool_calls = state["messages"][-1].tool_calls
+        results = []
+        t = tool_calls[0]
+        print(f"calling: {t['name']}")
+        tool_response = self.tools[t["name"]].invoke(t["args"])
+        results.append(ToolMessage(content = str(tool_response), tool_call_id = t["id"]))
+        
+        print("back to the llm")
+        return {"messages": results}   
