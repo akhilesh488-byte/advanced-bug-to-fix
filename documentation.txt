@@ -56,3 +56,48 @@ An LLM agent exceeded its iteration limit or hit a safety filter without produci
 Starting the next node would just be throwing money/compute into a black hole.
 
 Action: Route the graph to an END state or a specific human_intervention node.
+
+Here is how it is:
+my tools are generalized they will work anywhere and is not bound to my project which is good,
+now i am thinking of wrapping them around a function making them a separate node of their own 
+at the end make the llm call submit_tool to indicate that its done,
+the tools that are going to be used by llm will be wrapped inside the agent class graph,
+the tools that are going to be used by the pipeline i.e. called by pythonic functions will be wrapped inside the function but in pipeline.py's graph.
+so the question really comes down to how much of a control should be given to the llms and how much is to be handled manually.
+the tools that are used by llms:
+1. read_file
+2. run_shell
+3. search_code
+4. edit_file
+5. sandbox_manager
+6. write_file
+the tools handled manually:
+1. clone_repo
+2. list_files
+3. report_write
+
+so now wrap the llm tools in the function in agent class.
+
+workflow of pipeline:
+initialize the llms and check for api key validity -> if invalid or failed to initialize then abort
+get user prompt and git url
+clone the repo -> if fails abort with message
+list the files inside the repo -> if empty abort with message
+llm1 node on file names -> it should at the end write the report and call submit tool to end the loop
+llm2 node on llm1_report -> if no report then abort flag the problem which can be max tool calls or anyother reason which is handled inside the tool function -> at the end write the report and call the submit tool
+llm3 node on llm2_report and llm1_report -> if no llm2_report then abort with message consisting of the problem which can again be a max tool call or anyother reason handled inside the tool function -> again at the end it will write the report and call the submit tool
+to make this work, i need these variables in my state:
+1. job_id -> to create a new branch
+2. clone_success -> true if clonning was successful else false
+3. target_repo_path -> path of the clonned repository
+4. files -> list of files in repository
+5. report_path -> path of the report where llms will dump their final reports
+6. report_list -> this keeps track of the reports submitted by the llms
+the problem is how are you going to get the values to these variables
+7. user_prompt -> to store the user prompt
+8. git_url -> stores the git repository url
+9. baseline_output -> this stores the output of target_repo
+10. solution_branch_path -> this holds the path of the branch that has the solution
+again how to get this?
+11. failure_message -> any failure happens this state variable is updated and the process is ended
+
