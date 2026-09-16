@@ -1,11 +1,11 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
-target_repo = root / "target_repo"
 
-def list_files(target_repo: str = target_repo) -> dict:
+def list_files(relative_path: str = "target_repo") -> dict:
     try:
-        repo_path = Path(target_repo)
+        clean_path = relative_path.lstrip("/\\")
+        repo_path = (root/clean_path).resolve()
 
         if not repo_path.exists():
             return {"success": False, "error": "directory does not exists"}

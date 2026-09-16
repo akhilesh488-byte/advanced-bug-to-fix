@@ -11,23 +11,30 @@ def report_write(data: dict, file_name: str, format: str = "json") -> dict:
         report_path.mkdir(parents = True, exist_ok = True)
 
         if format == "json":
-            path = f"{report_path}/{file_name}.json"
+            path = Path(f"{report_path}/{file_name}.json")
+
+            if path.exists():
+                return {"success": False, "relative_path": None, "error": f"file named {file_name}.json already exists"}
+            
             with open(path, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2)
 
         elif format == "markdown":
-            path = f"{report_path}/{file_name}.md"
+            path = Path(f"{report_path}/{file_name}.md")
+            if path.exists():
+                return {"success": False, "relative_path": None, "error": f"file named {file_name}.md already exists"}
+                        
             content = dict_to_markdown(data)
             with open(path, "w", encoding="utf-8") as file:
                 file.write(content)
 
         else:
-            return {"success": False, "path": None, "error": f"unsupported format '{format}' - use json or markdown"}
+            return {"success": False, "relative_path": None, "error": f"unsupported format '{format}' - use json or markdown"}
 
-        return {"success": True, "path": path, "error": None}
+        return {"success": True, "relative_path": str(path.relative_to(root)), "error": None}
 
     except Exception as e:
-        return {"success": False, "path": None, "error": str(e)}
+        return {"success": False, "relative_path": None, "error": str(e)}
 
 def dict_to_markdown(data: dict) -> str:
 

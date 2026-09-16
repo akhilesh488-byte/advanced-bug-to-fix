@@ -6,7 +6,7 @@ def read_file(relative_path: str) -> dict:
 
     try:
         clean_path = relative_path.lstrip("/\\")
-        file_path = (clean_path/relative_path).resolve()
+        file_path = (root/clean_path).resolve()
         
         if not file_path.is_relative_to(root.resolve):
             return {"success": False, "error": f"access denied {relative_path} is outside the working directory"}
