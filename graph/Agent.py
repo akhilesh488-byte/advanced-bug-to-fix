@@ -63,7 +63,8 @@ class Agent:
             else:
                 return "other_actions"
 
-        else:
+        else: 
+            print(f"llm didn't return a tool call it returned: {state['messages']}")
             return END
 
     def submit_context(self, state:AgentState):
