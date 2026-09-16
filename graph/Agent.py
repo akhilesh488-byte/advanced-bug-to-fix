@@ -15,14 +15,14 @@ class Agent:
         self.max_iterations = max_iterations
         self.tools = tools
         graph.add_node("llm", self.call_llm)
-        graph.add_node("report_write_node", self.report_write_node)
+        graph.add_node("submit_context_node", self.submit_context)
         graph.add_node("other_actions", self.call_tool)
         graph.add_conditional_edges(
             "llm",
             self.action_exists
         )
         graph.add_edge("other_actions", "llm")
-        graph.add_edge("report_write_node", END)
+        graph.add_edge("submit_context_node", END)
         graph.set_entry_point("llm")
         self.graph = graph.compile()
 
@@ -57,8 +57,8 @@ class Agent:
             if state.get("iterations", 0) >= self.max_iterations:
                 return END
 
-            elif tool_calls[0]["name"] == "report_write":
-                return "report_write_node"
+            elif tool_calls[0]["name"] == "submit_context":
+                return "submit_context_node"
             
             else:
                 return "other_actions"
@@ -66,7 +66,7 @@ class Agent:
         else:
             return END
 
-    def report_write_node(self, state:AgentState):
+    def submit_context(self, state:AgentState):
         tool_calls = state["messages"][-1].tool_calls
         results = []
         t = tool_calls[0]
@@ -74,5 +74,5 @@ class Agent:
         tool_response = self.tools[t["name"]].invoke(t["args"])
         results.append(ToolMessage(content = str(tool_response), tool_call_id = t["id"]))
         
-        print("back to the llm")
+        print("-----------------end of llm1 loop------------------")
         return {"messages": results}   
