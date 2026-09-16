@@ -7,7 +7,7 @@ def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
     try:
 
         clean_path = relative_path.lstrip("/\\")
-        file_path = (clean_path/relative_path).resolve()
+        file_path = Path(root/clean_path).resolve()
 
         if not file_path.is_relative_to(root.resolve):
             return {"success": False, "error": f"access denied {relative_path} is outside the working directory"}
