@@ -9,7 +9,7 @@ def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
         clean_path = relative_path.lstrip("/\\")
         file_path = Path(root/clean_path).resolve()
 
-        if not file_path.is_relative_to(root.resolve):
+        if not file_path.is_relative_to(root.resolve()):
             return {"success": False, "error": f"access denied {relative_path} is outside the working directory"}
 
         if not file_path.exists():
@@ -22,7 +22,7 @@ def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
             return {"success": False, "error": "old_content not found in the file"}
 
         if count > 1:
-            return {"success": False, "error": "old_content is ambiguous, it was found {count} number of times"}
+            return {"success": False, "error": f"old_content is ambiguous, it was found {count} number of times"}
 
         updated_content = content.replace(old_content, new_content)
         file_path.write_text(updated_content, encoding="utf-8")

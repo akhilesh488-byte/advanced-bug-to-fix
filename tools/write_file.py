@@ -5,7 +5,7 @@ root = Path(__file__).resolve().parent.parent
 def write_file(relative_path: str, new_content: str, overwrite: bool = False) -> dict:
 
     try:
-        clean_path = relative_path.rstrip("/\\")
+        clean_path = relative_path.lstrip("/\\")
         file_path = (root / clean_path).resolve()
 
         if not file_path.is_relative_to(root):

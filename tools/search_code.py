@@ -32,7 +32,7 @@ def search_code(query: str, ext: str = ".py") -> dict:
                         }
                     )
 
-            return {"success": True, "matches": matches, "error": None}
+        return {"success": True, "matches": matches, "error": None}
 
     except Exception as e:
         return {"success": False, "matches": [], "error": str(e)}
