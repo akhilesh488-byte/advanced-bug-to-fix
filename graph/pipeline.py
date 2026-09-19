@@ -2,6 +2,7 @@ import os
 from typing import TypedDict, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
+from openai import OpenAI
 from langgraph.graph import StateGraph, END
 from graph.Agent import Agent
 from tools.clone_repo import clone_repo
@@ -205,7 +206,7 @@ def call_agent1(state:PipelineState):
         if last_message.tool_calls[0]["name"] != "submit_context":
             return {"agent1_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message["tool_calls"]["function"]["arguments"]
+        args = last_message.tool_calls[0]["arguments"]
         report_status = report_write(args["data"], "llm1_report", args["format"])
         if report_status["success"]:
             return {"agent1_status": True, "report_status": True}
@@ -227,15 +228,15 @@ def call_agent2(state: PipelineState):
         response = agent2.graph.invoke({"messages": prompt})
         last_message = response["messages"][-1]
 
-        if not last_message.tool_calls[0]["name"] != "submit_context":
+        if last_message.tool_calls[0]["name"] != "submit_context":
             return {"agent2_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message["tool_calls"]["function"]["arguments"]
-        report_status = report_write(args["data"], "llm1_report", args["format"])
+        args = last_message.tool_calls[0]["arguments"]
+        report_status = report_write(args["data"], "llm2_report", args["format"])
         if report_status["success"]:
             return {"agent2_status": True, "report_status": True}
         else:
-            return {"agent1_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
+            return {"agent2_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
 
     except Exception as e:
         return {"agent2_status": False, "llm_failure_message": str(e)}
@@ -252,18 +253,18 @@ def call_agent3(state: PipelineState):
             solved branch path: {state["solution_branch_path"]}
         """
 
-        response = agent2.graph.invoke({"messages": prompt})
+        response = agent3.graph.invoke({"messages": prompt})
         last_message = response["messages"][-1]
 
-        if not last_message.tool_calls[0]["name"] != "submit_context":
-            return {"agent1_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
+        if last_message.tool_calls[0]["name"] != "submit_context":
+            return {"agent3_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message["tool_calls"]["function"]["arguments"]
-        report_status = report_write(args["data"], "llm1_report", args["format"])
+        args = last_message.tool_calls[0]["arguments"]
+        report_status = report_write(args["data"], "llm3_report", args["format"])
         if report_status["success"]:
-            return {"agent1_status": True, "report_status": True}
+            return {"agent3_status": True, "report_status": True}
         else:
-            return {"agent1_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
+            return {"agent3_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
 
     except Exception as e:
         return {"agent3_status": False, "llm_failure_message": str(e)}
@@ -296,15 +297,15 @@ llm3 node on llm2_report and llm1_report -> if no llm2_report then abort with me
 
 #conditional edge 1
 #this is conditional edge function use this to verify
-def verify_api_connection(state: PipelineState):
-    print("verifying API keys...")
-    if state["api_status"] and llm1_model.models.list() and llm2_model.models.list() and llm3_model.models.list():
-        print("API keys verified")
-        return True
+# def verify_api_connection(state: PipelineState):
+#     print("verifying API keys...")
+#     if state["api_status"] and llm1_model.models.list() and llm2_model.models.list() and llm3_model.models.list():
+#         print("API keys verified")
+#         return True
 
-    else:
-        print("API key failure")
-        return False
+#     else:
+#         print("API key failure")
+#         return False
 
 def check_agent_initialization(state: PipelineState):
     if state['llm_failure_message']:
@@ -323,15 +324,15 @@ def repo_empty_check(state: PipelineState):
     if state["target_files"]:
         print(f"files in the target_repo are:{state['target_files']}")
         return True
+    if state["target_files"] is None:
+        return False
     if len(state["target_files"]):
         print(f"there are no files in {state['target_repo_path']}")
-        return False
-    if state["target_files"] is None:
         return False
 
 def check_agent1_work(state:PipelineState):
     llm1_report = list_files("report")["files"]
-    if "llm1_report" not in llm1_report:
+    if "llm1_report.json" not in llm1_report:
         print("agent1 couldn't write the report")
         return False
     
@@ -344,7 +345,7 @@ def check_agent1_work(state:PipelineState):
 
 def check_agent2_work(state: PipelineState):
     llm2_report = list_files("report")["files"]
-    if "llm2_report" not in llm2_report:
+    if "llm2_report.json" not in llm2_report:
         print("agent2 couldn't write the report")
         return False
     
@@ -357,7 +358,7 @@ def check_agent2_work(state: PipelineState):
 
 def check_agent3_work(state: PipelineState):
     llm3_report = list_files("report")["files"]
-    if "llm3_report" not in llm3_report:
+    if "llm3_report.md" not in llm3_report:
         print("agent3 couldn't write the report")
         return END
     
@@ -381,11 +382,12 @@ graph.add_node("call_agent1", call_agent1)
 graph.add_node("call_agent2", call_agent2)
 graph.add_node("call_agent3", call_agent3)
 
-graph.add_conditional_edges(
-    "build_model",
-    verify_api_connection,
-    {True: "initialize_agents", False: END}
-)
+graph.add_edge("build_model", "initialize_agents")
+# graph.add_conditional_edges(
+#     "build_model",
+#     verify_api_connection,
+#     {True: "initialize_agents", False: END}
+# )
 
 graph.add_conditional_edges(
     "initialize_agents",

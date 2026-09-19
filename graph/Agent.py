@@ -72,8 +72,6 @@ class Agent:
         results = []
         t = tool_calls[0]
         print(f"calling: {t['name']}")
-        tool_response = self.tools[t["name"]].invoke(t["args"])
-        results.append(ToolMessage(content = str(tool_response), tool_call_id = t["id"]))
-        
+        self.tools[t["name"]].invoke(t["args"])
         print("-----------------end of llm1 loop------------------")
         return {"messages": results}   
