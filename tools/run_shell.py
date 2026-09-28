@@ -30,7 +30,7 @@ def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
             commands = [sys.executable] + commands[1:]
         result = subprocess.run(
             commands,
-            cwd = cwd,
+            cwd = cwd_path,
             capture_output= True,
             text=True,
             timeout=timeout,
