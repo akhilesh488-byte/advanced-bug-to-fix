@@ -1,6 +1,6 @@
 import os
 from typing import TypedDict, Optional
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
 from langgraph.graph import StateGraph, END
@@ -14,10 +14,15 @@ from tools.run_shell import run_shell
 from tools.sandbox_manager import create_branch, discard_attempt, commit_changes
 from tools.search_code import search_code
 from tools.write_file import write_file
-from tools.submit_context import submit_context
+from tools.submit_context_report import submit_context_report
+from tools.submit_fix_result import submit_fix_result
+from tools.submit_verdict import submit_verdict
+from graph.prompts import llm1_prompt, llm2_prompt, llm3_prompt
+import uuid
+from dotenv import load_dotenv
 
 class PipelineState(TypedDict):
-    job_id: int
+    job_id: str
     clone_success: bool
     target_repo_path: Optional[str] 
     target_files: Optional[list[str]]
@@ -57,9 +62,6 @@ the tools handled manually:
 2. list_files
 3. report_write
 """
-llm1_prompt = """"""
-llm2_prompt = """"""
-llm3_prompt = """"""
 
 
 #-------------------------------------graph starts------------------------------------------
@@ -90,6 +92,7 @@ def build_model(state: PipelineState) -> ChatOpenAI:
         return {"api_status": True}
 
     except Exception as e:
+        print(str(e))
         return {"api_status": False}
 
 
@@ -102,10 +105,9 @@ def initialize_agents(state: PipelineState):
 
         llm1_tools = {
             "read_file": read_file,
-            "report_write": report_write,
             "run_shell": run_shell,
             "search_code": search_code,
-            "submit_context": submit_context
+            "submit_context_report": submit_context_report
         }
 
         agent1 = Agent(
@@ -118,13 +120,12 @@ def initialize_agents(state: PipelineState):
         llm2_tools = {
             "edit_file": edit_file,
             "read_file": read_file,
-            "report_write": report_write,
             "run_shell": run_shell,
             "create_branch": create_branch,
             "discard_attempt": discard_attempt,
             "commit_changes": commit_changes,
             "write_file": write_file,
-            "submit_context": submit_context
+            "submit_fix_result": submit_fix_result
         }
 
         agent2 = Agent(
@@ -135,15 +136,9 @@ def initialize_agents(state: PipelineState):
         )
 
         llm3_tools = {
-            "edit_file": edit_file,
             "read_file": read_file,
-            "report_write": report_write,
             "run_shell": run_shell,
-            "create_branch": create_branch,
-            "discard_attempt": discard_attempt,
-            "commit_changes": commit_changes,
-            "write_file": write_file,
-            "submit_context": submit_context
+            "submit_verdict": submit_verdict
         }
 
         agent3 = Agent(
@@ -168,7 +163,7 @@ def user_input(state: PipelineState):
         git_url = input("enter the git repository url")
 
         if user_prompt and git_url:
-            return {"user_prompt": user_prompt, "git_url": git_url}
+            return {"user_prompt": user_prompt, "git_url": git_url, "job_id": uuid.uuid4().hex[:8]}
 
         else:
             print("both the fields are mandatory, try again...")
@@ -177,13 +172,13 @@ def user_input(state: PipelineState):
 def clone_repository(state: PipelineState):
 
     print(f"clonning repository with url: {state['git_url']}...")
-    response = clone_repo(state["git_url"], "/target_repo")
+    response = clone_repo.invoke({"repo_url": state["git_url"]})
 
     return {"clone_success": response["success"], "target_repo_path": response["relative_path"]}
 
 def repo_files(state: PipelineState):
 
-    files_status = list_files(state["target_repo_path"])
+    files_status = list_files.invoke({"relative_path": state["target_repo_path"]})
     if not files_status["success"]:
         print(f"couldn't list the files in the target_repo reason: {files_status['error']}")
         return {"target_files": None}
@@ -192,75 +187,72 @@ def repo_files(state: PipelineState):
 #i will add the print statement listing all the file names in the repository in the conditional edge function since it is going to check if the repo is empty or not
 
 #one thing, report_write tools should be separate from other tool calls, make the llm return only content and you name the files and call the tool manually
-def call_agent1(state:PipelineState):
-    print("-----------------agent1 execution starts---------------------")
+def call_agent1(state: PipelineState):
     try:
-
-        prompt = f"""
-            bug report: {state['user_prompt']}
-            repo files: {state['target_files']}
-        """
-        response = agent1.graph.invoke({"messages": prompt})
+        prompt = f"bug report: {state['user_prompt']}\nrepo files: {state['target_files']}"
+        response = agent1.graph.invoke({"messages": [HumanMessage(content=prompt)]})
         last_message = response["messages"][-1]
 
-        if last_message.tool_calls[0]["name"] != "submit_context":
+        if not last_message.tool_calls or last_message.tool_calls[0]["name"] != "submit_context_report":
             return {"agent1_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message.tool_calls[0]["arguments"]
-        report_status = report_write(args["data"], "llm1_report", args["format"])
-        if report_status["success"]:
-            return {"agent1_status": True, "report_status": True}
-        else:
-            return {"agent1_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
+        args = last_message.tool_calls[0]["args"]
+        report_status = report_write.invoke({"data":args, "file_name": "llm1_report", "format": "json"})
 
+        return {
+            "agent1_status": True,
+            "report_status": report_status["success"],
+            "baseline_output": args["baseline_output"],  
+            "llm_failure_message": report_status.get("error"),
+        }
     except Exception as e:
         return {"agent1_status": False, "llm_failure_message": str(e)}
 
 #for the conditional edge, check if report_status is true check if llm1_report is in the report_dir if yes continue else abort
 def call_agent2(state: PipelineState):
-    print("-----------------agent2 execution starts---------------------")
     try:
-        llm1_report = read_file("/report/llm1_report")
-        prompt = f"""
-            report: {llm1_report}
-        """
-
-        response = agent2.graph.invoke({"messages": prompt})
+        llm1_report = read_file.invoke({"relative_path":"report/llm1_report.json"})
+        prompt = f"job id: {state['job_id']}\nreport: {llm1_report['content']}"
+        response = agent2.graph.invoke({"messages": [HumanMessage(content=prompt)]})
         last_message = response["messages"][-1]
 
-        if last_message.tool_calls[0]["name"] != "submit_context":
+        if not last_message.tool_calls or last_message.tool_calls[0]["name"] != "submit_fix_result":
             return {"agent2_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message.tool_calls[0]["arguments"]
-        report_status = report_write(args["data"], "llm2_report", args["format"])
-        if report_status["success"]:
-            return {"agent2_status": True, "report_status": True}
-        else:
-            return {"agent2_status": True, "report_status": False, "llm_failure_message": report_status["error"]}
+        args = last_message.tool_calls[0]["args"]
+        report_status = report_write.invoke({"data": args, "file_name": "llm2_report", "format": "json"})
 
+        return {
+            "agent2_status": True,
+            "report_status": report_status["success"],
+            "solution_branch_path": args["branch_name"],   
+            "llm_failure_message": report_status.get("error"),
+        }
     except Exception as e:
         return {"agent2_status": False, "llm_failure_message": str(e)}
 
 def call_agent3(state: PipelineState):
     print("-----------------agent3 execution starts---------------------")
     try:
-        llm1_report = read_file("/report/llm1_report")
-        llm2_report = read_file("/report/llm2_report")
+        llm1_report = read_file.invoke({"relative_path":"report/llm1_report.json"})
+        llm2_report = read_file.invoke({"relative_path":"report/llm2_report.json"})
         prompt = f"""
             llm1 report: {llm1_report}
             llm2 report: {llm2_report}
             baseline output: {state['baseline_output']}
             solved branch path: {state["solution_branch_path"]}
+            job id: {state['job_id']}
+
         """
 
-        response = agent3.graph.invoke({"messages": prompt})
+        response = agent3.graph.invoke({"messages": [HumanMessage(content = prompt)]})
         last_message = response["messages"][-1]
 
-        if last_message.tool_calls[0]["name"] != "submit_context":
+        if last_message.tool_calls[0]["name"] != "submit_verdict":
             return {"agent3_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
-        args = last_message.tool_calls[0]["arguments"]
-        report_status = report_write(args["data"], "llm3_report", args["format"])
+        args = last_message.tool_calls[0]["args"]
+        report_status = report_write.invoke({"data":args["data"], "file_name":"llm3_report", "format": args["format"]})
         if report_status["success"]:
             return {"agent3_status": True, "report_status": True}
         else:
@@ -321,17 +313,17 @@ def clone_repo_check(state: PipelineState):
     return False
 
 def repo_empty_check(state: PipelineState):
-    if state["target_files"]:
-        print(f"files in the target_repo are:{state['target_files']}")
-        return True
-    if state["target_files"] is None:
-        return False
-    if len(state["target_files"]):
-        print(f"there are no files in {state['target_repo_path']}")
+    files = state.get("target_files")
+
+    if not files:
+        print(f"no files found in {state.get('target_repo_path')}")
         return False
 
+    print(f"files in the target repo are: {files}")
+    return True
+
 def check_agent1_work(state:PipelineState):
-    llm1_report = list_files("report")["files"]
+    llm1_report = list_files.invoke({"relative_path": "report"}).get("files", [])
     if "llm1_report.json" not in llm1_report:
         print("agent1 couldn't write the report")
         return False
@@ -344,20 +336,20 @@ def check_agent1_work(state:PipelineState):
         return False
 
 def check_agent2_work(state: PipelineState):
-    llm2_report = list_files("report")["files"]
+    llm2_report = list_files.invoke({"relative_path": "report"}).get("files", [])
     if "llm2_report.json" not in llm2_report:
         print("agent2 couldn't write the report")
         return False
     
-    if state["agent1_status"] and state["report_status"]:
+    if state["agent2_status"] and state["report_status"]:
         return True
 
     else:
         print(state['llm_failure_message'])
         return False
 
-def check_agent3_work(state: PipelineState):
-    llm3_report = list_files("report")["files"]
+def check_agent3_work(state: PipelineState):    
+    llm3_report = list_files.invoke({"relative_path": "report"} ).get("files", [])
     if "llm3_report.md" not in llm3_report:
         print("agent3 couldn't write the report")
         return END
@@ -429,4 +421,5 @@ graph.add_conditional_edges(
     check_agent3_work
 )
 
+graph.set_entry_point("build_model")
 compiled_graph = graph.compile()

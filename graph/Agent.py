@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from typing import TypedDict, Annotated
-from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -24,7 +24,7 @@ class Agent:
         graph.add_edge("other_actions", "llm")
         graph.add_edge("submit_context_node", END)
         graph.set_entry_point("llm")
-        self.graph = graph.compile()
+        self.graph = graph.compile().with_config({"recursion_limit": max_iterations * 2 + 5})
 
     def call_llm(self, state: AgentState):
         messages = state["messages"]
@@ -44,7 +44,11 @@ class Agent:
                 print(f"tool named {t['name']} does not exist")
                 tool_response = "wrong tool name, retry"
             else:
-                tool_response = self.tools[t["name"]].invoke(t["args"])
+                try:
+                    tool_response = self.tools[t["name"]].invoke(t["args"])
+                except Exception as e:
+                    tool_response = f"tool error: {e}"
+
             results.append(ToolMessage(content = str(tool_response), tool_call_id = t["id"]))
 
         print("back to the llm")
@@ -57,7 +61,7 @@ class Agent:
             if state.get("iterations", 0) >= self.max_iterations:
                 return END
 
-            elif tool_calls[0]["name"] == "submit_context":
+            elif tool_calls[0]["name"].startswith("submit_"):
                 return "submit_context_node"
             
             else:
@@ -72,6 +76,10 @@ class Agent:
         results = []
         t = tool_calls[0]
         print(f"calling: {t['name']}")
-        self.tools[t["name"]].invoke(t["args"])
+        try: 
+            self.tools[t["name"]].invoke(t["args"])
+        except Exception as e:
+            response = f"error: {e}"
+            print("an error occurred", response)
         print("-----------------end of llm1 loop------------------")
         return {"messages": results}   
