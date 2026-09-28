@@ -34,6 +34,7 @@ def create_branch(job_id: str, attempt_no: int, target_repo_path: str = target_r
         return {
             "success": True,
             "branch_name": branch_name,
+            "worktree_path": worktree_path,
             "relative_worktree_path": str(Path(worktree_path).relative_to(root)),
             "error": None
         }
