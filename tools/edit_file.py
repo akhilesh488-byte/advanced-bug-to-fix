@@ -1,9 +1,11 @@
+from langchain_core.tools import tool
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 
+@tool
 def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
-
+    """call this tool to edit a file in the working directory"""
     try:
 
         clean_path = relative_path.lstrip("/\\")

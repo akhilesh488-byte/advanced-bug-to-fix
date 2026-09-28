@@ -1,10 +1,11 @@
+from langchain_core.tools import tool
 from pathlib import Path
 from datetime import datetime
 import json
 
-
+@tool
 def report_write(data: dict, file_name: str, format: str = "json") -> dict:
-
+    """call this tool to write a report to a file"""
     try:
         root = Path(__file__).resolve().parent.parent
         report_path = root/"report"

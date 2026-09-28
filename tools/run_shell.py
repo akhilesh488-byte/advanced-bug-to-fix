@@ -1,7 +1,9 @@
+from langchain_core.tools import tool
 import subprocess
 
+@tool
 def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
-
+    """call this tool to run shell commands in the target_repo folder"""
     try:
         result = subprocess.run(
             commands,

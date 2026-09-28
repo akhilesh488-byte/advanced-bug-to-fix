@@ -1,9 +1,11 @@
+from langchain_core.tools import tool
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 
+@tool
 def write_file(relative_path: str, new_content: str, overwrite: bool = False) -> dict:
-
+    """call this tool to write a file in the working directory"""
     try:
         clean_path = relative_path.lstrip("/\\")
         file_path = (root / clean_path).resolve()

@@ -1,8 +1,11 @@
+from langchain_core.tools import tool
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 
+@tool
 def list_files(relative_path: str = "target_repo") -> dict:
+    """call this tool to list all files in the target_repo folder"""
     try:
         clean_path = relative_path.lstrip("/\\")
         repo_path = (root/clean_path).resolve()

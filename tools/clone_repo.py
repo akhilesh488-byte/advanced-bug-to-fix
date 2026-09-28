@@ -1,10 +1,12 @@
+from langchain_core.tools import tool
 from git import Repo, GitCommandError
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 
+@tool
 def clone_repo(repo_url: str, relative_path: str = "target_repo") -> dict:
-
+    """call this tool to clone a git repository into the target_repo folder"""
     try:
         clean_path = relative_path.lstrip("/\\")
         target_repo = (root/clean_path).resolve()

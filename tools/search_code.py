@@ -1,8 +1,10 @@
+from langchain_core.tools import tool
 from pathlib import Path
 
 
+@tool
 def search_code(query: str, ext: str = ".py") -> dict:
-
+    """call this tool to search for a query in the target_repo folder"""
     try:
         root = Path(__file__).resolve().parent.parent
         root_path = root/"target_repo"
