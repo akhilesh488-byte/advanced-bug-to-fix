@@ -4,7 +4,18 @@ from pathlib import Path
 
 @tool
 def search_code(query: str, ext: str = ".py") -> dict:
-    """call this tool to search for a query in the target_repo folder"""
+    """Find which lines in target_repo contain an exact piece of text.
+
+    This is a case-sensitive substring match on each line, so
+    "def calculate_total" matches but "calculate total" does not, and even a
+    stray space matters. Returns a list of matches with file, line number and
+    the line's text. Use it to locate a function, variable or error string,
+    then read_file the matching file.
+
+    Args:
+        query: The exact text to look for.
+        ext: Only search files with this extension, e.g. ".py".
+    """
     try:
         root = Path(__file__).resolve().parent.parent
         root_path = root/"target_repo"

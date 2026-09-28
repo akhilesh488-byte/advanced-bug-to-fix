@@ -5,7 +5,15 @@ root = Path(__file__).resolve().parent.parent
 
 @tool
 def read_file(relative_path: str) -> dict:
-    """call this tool to read a file in the working directory"""
+    """Read the full text of one file and return its content.
+
+    Always returns the whole file. If you don't know the path yet, use
+    list_files or search_code first. Returns success, content and error.
+
+    Args:
+        relative_path: Path relative to the project root, exactly as shown by
+            list_files or search_code, e.g. "target_repo/src/main.py".
+    """
     try:
         clean_path = relative_path.lstrip("/\\")
         file_path = (root/clean_path).resolve()

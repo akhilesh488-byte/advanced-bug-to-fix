@@ -5,7 +5,13 @@ root = Path(__file__).resolve().parent.parent
 
 @tool
 def list_files(relative_path: str = "target_repo") -> dict:
-    """call this tool to list all files in the target_repo folder"""
+    """List every file inside a folder, including subfolders.
+
+    Returns file paths relative to the project root, not folders.
+
+    Args:
+        relative_path: Folder to list, relative to the project root.
+    """
     try:
         clean_path = relative_path.lstrip("/\\")
         repo_path = (root/clean_path).resolve()

@@ -5,7 +5,20 @@ root = Path(__file__).resolve().parent.parent
 
 @tool
 def edit_file(relative_path: str, old_content: str, new_content: str) -> dict:
-    """call this tool to edit a file in the working directory"""
+    """Replace one exact block of text in an existing file with new text.
+
+    old_content must match the file exactly, including indentation and
+    whitespace, so copy it verbatim from read_file output. It must appear
+    exactly once. If it is not found, or found more than once, nothing is
+    changed and you get an error. Add a few surrounding lines to make a
+    repeated snippet unique. Only edit files inside your own worktree
+    (sandbox/...), never inside target_repo.
+
+    Args:
+        relative_path: Path relative to the project root, e.g. "sandbox/<job_id>-attempt-1/main.py".
+        old_content: The exact existing text to replace.
+        new_content: The text to put in its place.
+    """
     try:
 
         clean_path = relative_path.lstrip("/\\")

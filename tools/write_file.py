@@ -5,7 +5,18 @@ root = Path(__file__).resolve().parent.parent
 
 @tool
 def write_file(relative_path: str, new_content: str, overwrite: bool = False) -> dict:
-    """call this tool to write a file in the working directory"""
+    """Create a new file with the given content.
+
+    Refuses to replace an existing file unless overwrite=True, so only set
+    that when you really mean to replace it. To change part of an existing
+    file use edit_file instead. Only write inside your own worktree
+    (sandbox/...), never inside target_repo.
+
+    Args:
+        relative_path: Path relative to the project root, e.g. "sandbox/<job_id>-attempt-1/test_fix.py".
+        new_content: The complete text to write into the file.
+        overwrite: Set True to replace a file that already exists.
+    """
     try:
         clean_path = relative_path.lstrip("/\\")
         file_path = (root / clean_path).resolve()

@@ -3,7 +3,20 @@ import subprocess
 
 @tool
 def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
-    """call this tool to run shell commands in the target_repo folder"""
+    """Run a command in a directory and return its output.
+
+    Pass the command as a list of strings with no shell features, e.g.
+    ["python", "main.py"]. Do not pass one combined string, and do not use
+    pipes or &&. The program gets no keyboard input, so anything calling
+    input() fails immediately with EOFError. A crash shows up as a traceback
+    in stderr. Returns success, stdout, stderr and exit_code.
+
+    Args:
+        commands: The command and its arguments as a list of strings.
+        cwd: Directory to run in. Use "target_repo" to run the original code,
+            or your worktree path to test a fix.
+        timeout: Seconds before the command is killed.
+    """
     try:
         result = subprocess.run(
             commands,

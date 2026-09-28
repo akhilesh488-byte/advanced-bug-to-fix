@@ -6,7 +6,15 @@ root = Path(__file__).resolve().parent.parent
 
 @tool
 def clone_repo(repo_url: str, relative_path: str = "target_repo") -> dict:
-    """call this tool to clone a git repository into the target_repo folder"""
+    """Clone a git repository into the project folder.
+
+    Fails if the destination already exists and is not empty. Returns success,
+    the relative_path it was cloned to, and error.
+
+    Args:
+        repo_url: URL of the git repository to clone.
+        relative_path: Destination folder relative to the project root.
+    """
     try:
         clean_path = relative_path.lstrip("/\\")
         target_repo = (root/clean_path).resolve()

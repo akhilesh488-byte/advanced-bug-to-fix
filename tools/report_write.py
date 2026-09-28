@@ -5,7 +5,15 @@ import json
 
 @tool
 def report_write(data: dict, file_name: str, format: str = "json") -> dict:
-    """call this tool to write a report to a file"""
+    """Write a report to report/<file_name>.json or report/<file_name>.md.
+
+    Refuses to overwrite a report that already exists.
+
+    Args:
+        data: The report content as a dict.
+        file_name: Name without extension, e.g. "llm1_report".
+        format: Either "json" or "markdown".
+    """
     try:
         root = Path(__file__).resolve().parent.parent
         report_path = root/"report"
