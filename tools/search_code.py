@@ -39,7 +39,7 @@ def search_code(query: str, ext: str = ".py") -> dict:
                 if query in line:
                     matches.append(
                         {
-                            "file": str(file_path),
+                            "file": str(file_path.relative_to(root)),
                             "line": i,
                             "text": line.strip()
                         }

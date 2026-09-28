@@ -21,7 +21,7 @@ def list_files(relative_path: str = "target_repo") -> dict:
 
         files = []
         for path in repo_path.rglob("*"):
-            if path.is_file(): #this also avoids empty directories in the target_repo
+            if path.is_file() and ".git" not in path.relative_to(repo_path).parts: #this also avoids empty directories in the target_repo
                 files.append(str(path.relative_to(repo_path)))
 
         return {"success": True, "files": files, "error": None} 

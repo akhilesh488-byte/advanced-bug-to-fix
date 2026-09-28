@@ -1,5 +1,9 @@
 from langchain_core.tools import tool
 import subprocess
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
 
 @tool
 def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
@@ -18,6 +22,12 @@ def run_shell(commands: list[str], cwd: str, timeout: int = 60) -> dict:
         timeout: Seconds before the command is killed.
     """
     try:
+        cwd_path = Path(cwd)
+        if not cwd_path.is_absolute():
+            cwd_path = root/cwd_path
+
+        if commands and commands[0] in ("python", "python3"):
+            commands = [sys.executable] + commands[1:]
         result = subprocess.run(
             commands,
             cwd = cwd,
