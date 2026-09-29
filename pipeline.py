@@ -21,6 +21,7 @@ from graph.prompts import llm1_prompt, llm2_prompt, llm3_prompt
 import uuid
 from dotenv import load_dotenv
 
+key = load_dotenv()
 class PipelineState(TypedDict):
     job_id: str
     clone_success: bool
@@ -71,23 +72,11 @@ def build_model(state: PipelineState) -> ChatOpenAI:
 
     try:
 
-        llm1_model = ChatOpenAI(
-            model = os.getenv("LLM1"),
-            base_url = "https://openrouter.ai/api/v1",
-            api_key = os.getenv("OPENROUTER_API_KEY")
-        )
+        llm1_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
-        llm2_model = ChatOpenAI(
-                model = os.getenv("LLM2"),
-                base_url = "https://openrouter.ai/api/v1",
-                api_key = os.getenv("OPENROUTER_API_KEY")
-            )
+        llm2_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
-        llm3_model = ChatOpenAI(
-                model = os.getenv("LLM3"),
-                base_url = "https://openrouter.ai/api/v1",
-                api_key = os.getenv("OPENROUTER_API_KEY")
-            )
+        llm3_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
         return {"api_status": True}
 
@@ -99,7 +88,7 @@ def build_model(state: PipelineState) -> ChatOpenAI:
 #this is a node it will update the state, add the conditional edge to check if initialization was successful
 def initialize_agents(state: PipelineState):
 
-    print("initializing all three agents")
+    print("Trying to initialize all three agents...")
     try:
         global agent1, agent2, agent3
 
@@ -171,14 +160,14 @@ def user_input(state: PipelineState):
 
 def clone_repository(state: PipelineState):
 
-    print(f"clonning repository with url: {state['git_url']}...")
-    response = clone_repo.invoke({"repo_url": state["git_url"]})
+    print(f"clonning repository with url: {state.get('git_url')}...")
+    response = clone_repo.invoke({"repo_url": state.get("git_url")})
 
     return {"clone_success": response["success"], "target_repo_path": response["relative_path"]}
 
 def repo_files(state: PipelineState):
 
-    files_status = list_files.invoke({"relative_path": state["target_repo_path"]})
+    files_status = list_files.invoke({"relative_path": state.get("target_repo_path")})
     if not files_status["success"]:
         print(f"couldn't list the files in the target_repo reason: {files_status['error']}")
         return {"target_files": None}
@@ -188,8 +177,9 @@ def repo_files(state: PipelineState):
 
 #one thing, report_write tools should be separate from other tool calls, make the llm return only content and you name the files and call the tool manually
 def call_agent1(state: PipelineState):
+    print("-----------------------agent1 execution starts----------------------")
     try:
-        prompt = f"bug report: {state['user_prompt']}\nrepo files: {state['target_files']}"
+        prompt = f"bug report: {state.get('user_prompt')}\nrepo files: {state.get('target_files')}"
         response = agent1.graph.invoke({"messages": [HumanMessage(content=prompt)]})
         last_message = response["messages"][-1]
 
@@ -210,9 +200,10 @@ def call_agent1(state: PipelineState):
 
 #for the conditional edge, check if report_status is true check if llm1_report is in the report_dir if yes continue else abort
 def call_agent2(state: PipelineState):
+    print("--------------------------------agent2 execution starts--------------------------------")
     try:
         llm1_report = read_file.invoke({"relative_path":"report/llm1_report.json"})
-        prompt = f"job id: {state['job_id']}\nreport: {llm1_report['content']}"
+        prompt = f"job id: {state.get('job_id')}\nreport: {llm1_report['content']}"
         response = agent2.graph.invoke({"messages": [HumanMessage(content=prompt)]})
         last_message = response["messages"][-1]
 
@@ -239,9 +230,9 @@ def call_agent3(state: PipelineState):
         prompt = f"""
             llm1 report: {llm1_report}
             llm2 report: {llm2_report}
-            baseline output: {state['baseline_output']}
-            solved branch path: {state["solution_branch_path"]}
-            job id: {state['job_id']}
+            baseline output: {state.get('baseline_output')}
+            solved branch path: {state.get("solution_branch_path")}
+            job id: {state.get('job_id')}
 
         """
 
@@ -252,7 +243,10 @@ def call_agent3(state: PipelineState):
             return {"agent3_status": False, "report_status": False, "llm_failure_message": "agent did not submit"}
 
         args = last_message.tool_calls[0]["args"]
-        report_status = report_write.invoke({"data":args["data"], "file_name":"llm3_report", "format": args["format"]})
+        report_data = args.get("data", args)
+        report_format = args.get("format", "md")
+
+        report_status = report_write.invoke({"data": report_data, "file_name": "llm3_report", "format": report_format})
         if report_status["success"]:
             return {"agent3_status": True, "report_status": True}
         else:
@@ -289,25 +283,26 @@ llm3 node on llm2_report and llm1_report -> if no llm2_report then abort with me
 
 #conditional edge 1
 #this is conditional edge function use this to verify
-# def verify_api_connection(state: PipelineState):
-#     print("verifying API keys...")
-#     if state["api_status"] and llm1_model.models.list() and llm2_model.models.list() and llm3_model.models.list():
-#         print("API keys verified")
-#         return True
+def verify_api_connection(state: PipelineState):
+    print("verifying API keys...")
+    response = llm1_model.invoke([HumanMessage(content = "HI")])
+    if state["api_status"] and response:
+        print("API keys verified")
+        return True
 
-#     else:
-#         print("API key failure")
-#         return False
+    else:
+        print("API key failure")
+        return False
 
 def check_agent_initialization(state: PipelineState):
-    if state['llm_failure_message']:
-        print(state['llm_failure_message'])
+    if state.get('llm_failure_message'):
+        print(state.get('llm_failure_message'))
         return False
     return True
 
 def clone_repo_check(state: PipelineState):
-    if state["clone_success"]:
-        print(f"successfully clonned the repository at {state['target_repo_path']}")
+    if state.get("clone_success"):
+        print(f"successfully clonned the repository at {state.get('target_repo_path')}")
         return True
     
     return False
@@ -324,42 +319,42 @@ def repo_empty_check(state: PipelineState):
 
 def check_agent1_work(state:PipelineState):
     llm1_report = list_files.invoke({"relative_path": "report"}).get("files", [])
-    if "llm1_report.json" not in llm1_report:
+    if not any("llm1_report.json" in f for f in llm1_report):
         print("agent1 couldn't write the report")
         return False
     
-    if state["agent1_status"] and state["report_status"]:
+    if state.get("agent1_status") and state.get("report_status"):
         return True
 
     else:
-        print(state['llm_failure_message'])
+        print(state.get('llm_failure_message'))
         return False
 
 def check_agent2_work(state: PipelineState):
     llm2_report = list_files.invoke({"relative_path": "report"}).get("files", [])
-    if "llm2_report.json" not in llm2_report:
+    if not any("llm2_report.json" in f for f in llm2_report):
         print("agent2 couldn't write the report")
         return False
     
-    if state["agent2_status"] and state["report_status"]:
+    if state.get("agent2_status") and state.get("report_status"):
         return True
 
     else:
-        print(state['llm_failure_message'])
+        print(state.get('llm_failure_message'))
         return False
 
 def check_agent3_work(state: PipelineState):    
     llm3_report = list_files.invoke({"relative_path": "report"} ).get("files", [])
-    if "llm3_report.md" not in llm3_report:
+    if not any("llm3_report.md" in f for f in llm3_report):
         print("agent3 couldn't write the report")
         return END
     
-    if state["agent3_status"] and state["report_status"]:
+    if state.get("agent3_status") and state.get("report_status"):
         print("--------------------execution successful----------------------")
         return END
 
     else:
-        print(state['llm_failure_message'])
+        print(state.get('llm_failure_message'))
         return END
 #-------------------------------------------graph initialization-----------------------------------------------
 
@@ -375,11 +370,11 @@ graph.add_node("call_agent2", call_agent2)
 graph.add_node("call_agent3", call_agent3)
 
 graph.add_edge("build_model", "initialize_agents")
-# graph.add_conditional_edges(
-#     "build_model",
-#     verify_api_connection,
-#     {True: "initialize_agents", False: END}
-# )
+graph.add_conditional_edges(
+    "build_model",
+    verify_api_connection,
+    {True: "initialize_agents", False: END}
+)
 
 graph.add_conditional_edges(
     "initialize_agents",

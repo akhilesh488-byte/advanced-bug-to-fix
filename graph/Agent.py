@@ -81,5 +81,5 @@ class Agent:
         except Exception as e:
             response = f"error: {e}"
             print("an error occurred", response)
-        print("-----------------end of llm1 loop------------------")
+        print("-----------------End of agent loop---------------------")
         return {"messages": results}   

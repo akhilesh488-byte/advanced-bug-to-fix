@@ -12,7 +12,7 @@ def report_write(data: dict, file_name: str, format: str = "json") -> dict:
     Args:
         data: The report content as a dict.
         file_name: Name without extension, e.g. "llm1_report".
-        format: Either "json" or "markdown".
+        format: Either "json" or "md".
     """
     try:
         root = Path(__file__).resolve().parent.parent
@@ -28,7 +28,7 @@ def report_write(data: dict, file_name: str, format: str = "json") -> dict:
             with open(path, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2)
 
-        elif format == "markdown":
+        elif format == "md":
             path = Path(f"{report_path}/{file_name}.md")
             if path.exists():
                 return {"success": False, "relative_path": None, "error": f"file named {file_name}.md already exists"}
