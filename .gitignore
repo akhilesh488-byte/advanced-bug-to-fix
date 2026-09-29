@@ -1,3 +1,17 @@
+# Environments
 .venv/
-venv
+venv/
 .env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pipeline Dynamic Directories
+target_repo/
+sandbox/
+report/
+
+# VS Code
+.vscode/
