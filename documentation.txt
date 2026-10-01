@@ -32,7 +32,15 @@ tools:
 6. write_file: this is simple, if file does not exist create a new and write the contents, if already exist then replace the content but make sure that llm is aware of this.
 7. report_write: llm will pass the reports to each other as context, for visibility its best to write it down in the disk and use it.
         At the end we want to generate a final report for Human review.
+8. sandbox_manager: this is complicated, for v1 we will use the exact same method engineers use to fix a bug in a repo — create a branch, work on it, commit as you go.
+	a. create_branch: creates a new worktree + branch off the main branch, so the llm gets its own isolated working folder without touching target_repo, history stays shared through target_repo's .git so nothing is duplicated.
+	b. commit_changes: commits whatever changes the llm made in that attempt's worktree, this is called every time whether the attempt succeeds or fails, not just on success — if we skip committing on a failed attempt, discard_attempt wipes the changes out completely and we lose the record of what was tried.
+	c. discard_attempt: removes the failed attempt's worktree folder, but keeps the branch (renamed to mark it failed) instead of deleting it, so if the user wants to see what the llm tried and why it didn't work, the commits are still sitting there to look at.
+	note: to keep things simple and consistent for v1, we are not giving the llm the ability to go back to a specific past commit or pick and choose what to keep, too much added complexity and risk of broken git state, instead if an attempt fails we retry fresh with a new attempt, and the llm leans on the failure report (not git) to avoid repeating the same mistake, so the commits here exist for the human audit trail and for producing a pushable branch, not for the llm's own retry logic.
 
+9. submit_context_report / submit_fix_result / submit_verdict: these aren't real tools, they don't do anything when called, their only job is to force the llm to end its turn with a structured answer instead of free text, each llm gets its own submit tool with fields matching exactly what it needs to report — llm1 reports its diagnosis + baseline_output, llm2 reports the branch_name + what it tried, llm3 reports the final verdict.
+	method: the agent's action_exists check looks for any tool call starting with "submit_" and ends the loop right there, without actually running the tool.
+	note: report_write is never given to the llm directly, the node code (not the llm) reads the submit call's arguments and writes the report itself, this way disk writes are always correct and predictable instead of depending on the llm remembering to write the file right, same reasoning as not giving the llm control over file paths.
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -71,6 +79,9 @@ the tools that are used by llms:
 4. edit_file
 5. sandbox_manager
 6. write_file
+7. submit_context_report
+8. submit_fix_result
+9. submit_verdict
 the tools handled manually:
 1. clone_repo
 2. list_files
@@ -100,4 +111,5 @@ the problem is how are you going to get the values to these variables
 10. solution_branch_path -> this holds the path of the branch that has the solution
 again how to get this?
 11. failure_message -> any failure happens this state variable is updated and the process is ended
+
 

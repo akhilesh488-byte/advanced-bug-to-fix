@@ -21,7 +21,7 @@ from graph.prompts import llm1_prompt, llm2_prompt, llm3_prompt
 import uuid
 from dotenv import load_dotenv
 
-key = load_dotenv()
+load_dotenv()
 class PipelineState(TypedDict):
     job_id: str
     clone_success: bool
@@ -72,13 +72,23 @@ def build_model(state: PipelineState) -> ChatOpenAI:
 
     try:
 
-        llm1_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        llm1_model = ChatOpenAI(
+            model = os.getenv("LLM1"),
+            base_url = "https://openrouter.ai/api/v1",
+            api_key = os.getenv("OPENROUTER_API_KEY")
+        )
 
-        llm2_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        llm2_model = ChatOpenAI(
+            model = os.getenv("LLM2"),
+            base_url = "https://openrouter.ai/api/v1",
+            api_key = os.getenv("OPENROUTER_API_KEY")
+        )
 
-        llm3_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-
-        return {"api_status": True}
+        llm3_model = ChatOpenAI(
+            model = os.getenv("LLM3"),
+            base_url = "https://openrouter.ai/api/v1",
+            api_key = os.getenv("OPENROUTER_API_KEY")
+        )
 
     except Exception as e:
         print(str(e))
